@@ -1,0 +1,155 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+textarea {
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#viewer-tree {
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#transform-output {
+  resize: none;
+}
+
+.error-box {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.hidden {
+  display: none !important;
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+select {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #ccc;
+  font-size: 0.875rem;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+}
+
+select:hover {
+  border-color: #999;
+}
+
+input[type="text"] {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #ccc;
+  font-size: 0.875rem;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  select {
+    background-color: #1f2937;
+    color: #f3f4f6;
+    border-color: #4b5563;
+  }
+
+  select:hover {
+    border-color: #6b7280;
+  }
+
+  input[type="text"] {
+    background-color: #1f2937;
+    color: #f3f4f6;
+    border-color: #4b5563;
+  }
+
+  input[type="text"]:focus {
+    border-color: #3b82f6;
+  }
+}
+
+#annotate-canvas {
+  cursor: crosshair;
+  touch-action: none;
+  background-color: white;
+}
+
+#annotate-text-input {
+  padding: 0 2px;
+  border-radius: 2px;
+  min-width: 8rem;
+  line-height: 1.05;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: bold;
+}
+
+#annotate-text-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+
+[data-annotate-color] {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Transformer editors: never squeezed below a usable height by the toolbar */
+.editor-row {
+  min-height: 26rem;
+}
+
+#transform-input,
+#transform-output {
+  resize: vertical;
+}
+
+/* "Expand" pops a single pane out to fill the window */
+.pane-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 1rem;
+  background-color: #ffffff;
+}
+
+.pane-expanded textarea {
+  resize: none;
+}
+
+body.pane-expanded-open {
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pane-expanded {
+    background-color: #030712;
+  }
+}

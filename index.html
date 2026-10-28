@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevTools</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <nav class="w-48 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col gap-2">
+      <h1 class="text-lg font-bold mb-4">DevTools</h1>
+      <button data-tool="viewer" class="px-4 py-2 rounded text-left font-medium transition-colors">
+        JSON Viewer
+      </button>
+      <button data-tool="transform" class="px-4 py-2 rounded text-left font-medium transition-colors">
+        JSON Transform
+      </button>
+      <button data-tool="pytojson" class="px-4 py-2 rounded text-left font-medium transition-colors">
+        Python → JSON
+      </button>
+      <button data-tool="base64" class="px-4 py-2 rounded text-left font-medium transition-colors">
+        Base64
+      </button>
+      <button data-tool="annotate" class="px-4 py-2 rounded text-left font-medium transition-colors">
+        Image Annotator
+      </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-hidden flex flex-col">
+      <!-- JSON Viewer Panel -->
+      <section data-panel="viewer" class="flex-1 overflow-auto p-6 hidden flex flex-col gap-4">
+        <h2 class="text-2xl font-bold">JSON Viewer</h2>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Paste JSON to view it as an interactive tree</p>
+
+        <div id="viewer-error" class="error-box hidden bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 rounded p-3 text-sm font-mono"></div>
+
+        <div class="flex gap-4 flex-1 min-h-0">
+          <div class="flex-1 flex flex-col gap-2">
+            <label class="text-sm font-medium">Input JSON</label>
+            <textarea id="viewer-input" class="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 font-mono text-xs" placeholder="Paste JSON here..."></textarea>
+          </div>
+          <div class="flex-1 flex flex-col gap-2 overflow-hidden">
+            <label class="text-sm font-medium">Tree View</label>
+            <div id="viewer-tree" class="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 text-xs"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- JSON Transformer Panel -->
+      <section data-panel="transform" class="flex-1 overflow-auto p-6 hidden flex flex-col gap-4">
+        <h2 class="text-2xl font-bold">JSON Transformer</h2>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Format, minify, sort, extract, convert, and transform JSON</p>
+
+        <div id="transform-error" class="error-box hidden bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 rounded p-3 text-sm font-mono"></div>
+
+        <!-- Controls -->
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-4 space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm font-medium block mb-1">Format Options</label>
+              <div class="flex gap-2 flex-wrap">
+                <button id="btn-format" class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 text-sm font-medium">Format</button>
+                <button id="btn-minify" class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 text-sm font-medium">Minify</button>
+                <button id="btn-sort" class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 text-sm font-medium">Sort Keys</button>
+              </div>
+              <div class="mt-2">
+                <label class="text-xs block mb-1">Indent</label>
+                <select id="indent-size" class="w-full">
+                  <option value="2">2 spaces</option>
+                  <option value="4">4 spaces</option>
+                  <option value="tab">Tab</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium block mb-1">Key Conversion</label>
+              <div class="flex gap-2 flex-wrap mb-2">
+                <button id="btn-convert-keys" class="px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 text-sm font-medium">Convert Keys</button>
+              </div>
+              <div>
+                <label class="text-xs block mb-1">Target Case</label>
+                <select id="case-target" class="w-full">
+                  <option value="camelCase">camelCase</option>
+                  <option value="PascalCase">PascalCase</option>
+                  <option value="snake_case">snake_case</option>
+                  <option value="kebab-case">kebab-case</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-gray-300 dark:border-gray-700 pt-4">
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-medium">JSONPath Query</label>
+              <a href="https://github.com/JSONPath-Plus/JSONPath#syntax-through-examples" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">full syntax reference &#8599;</a>
+            </div>
+            <div class="flex gap-2">
+              <input id="jsonpath-input" type="text" placeholder="e.g. $.store.book[?(@.price &lt; 10)].title" class="flex-1">
+              <select id="jsonpath-result-type" title="What to output for each match">
+                <option value="value">Values</option>
+                <option value="path">Paths</option>
+                <option value="all">Path + value</option>
+                <option value="pointer">JSON Pointers</option>
+              </select>
+              <button id="btn-extract" class="px-3 py-1.5 rounded bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-500 text-sm font-medium">Extract</button>
+            </div>
+            <div class="flex gap-4 items-center mt-2">
+              <label class="text-xs flex gap-1.5 items-center cursor-pointer select-none">
+                <input id="jsonpath-unwrap" type="checkbox" checked class="cursor-pointer">
+                Unwrap single match
+              </label>
+              <div id="jsonpath-caption" class="text-xs text-gray-500 dark:text-gray-400 hidden"></div>
+            </div>
+            <details class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              <summary class="cursor-pointer select-none hover:text-gray-900 dark:hover:text-gray-200">Cheat sheet</summary>
+              <div class="grid grid-cols-2 gap-x-6 gap-y-1 mt-2 pl-1">
+                <div><code>$.a.b</code> &mdash; child</div>
+                <div><code>$['a b']</code> &mdash; key with spaces</div>
+                <div><code>$.items[0]</code> / <code>[-1]</code> &mdash; index</div>
+                <div><code>$.items[*]</code> &mdash; every element</div>
+                <div><code>$.items[1:4:2]</code> &mdash; slice</div>
+                <div><code>$.items[0,2]</code> &mdash; union</div>
+                <div><code>$..price</code> &mdash; recursive descent</div>
+                <div><code>$..*</code> &mdash; every node</div>
+                <div><code>$..book[?(@.price &lt; 10)]</code> &mdash; filter</div>
+                <div><code>?(@.a &amp;&amp; @.b != 'x')</code> &mdash; logic</div>
+                <div><code>?(@.name.match(/^A/))</code> &mdash; regex</div>
+                <div><code>?(@.price &lt; $.budget)</code> &mdash; compare to root</div>
+                <div><code>?(@property === 'id')</code> &mdash; match on key</div>
+                <div><code>$..*@string()</code> &mdash; by type</div>
+                <div><code>$.a.b^</code> &mdash; parent of match</div>
+                <div><code>$.a.b~</code> &mdash; key instead of value</div>
+              </div>
+            </details>
+          </div>
+
+          <div class="border-t border-gray-300 dark:border-gray-700 pt-4">
+            <label class="text-sm font-medium block mb-2">Escape / Unescape</label>
+            <div class="flex gap-2 flex-wrap">
+              <button id="btn-escape" class="px-3 py-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 text-sm font-medium">Escape JSON</button>
+              <button id="btn-unescape" class="px-3 py-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 text-sm font-medium">Unescape JSON</button>
+            </div>
+          </div>
+
+          <div class="border-t border-gray-300 dark:border-gray-700 pt-4">
+            <label class="text-sm font-medium block mb-2">CSV Conversion</label>
+            <div class="flex gap-2 flex-wrap">
+              <button id="btn-json-to-csv" class="px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 text-sm font-medium">JSON → CSV</button>
+              <button id="btn-csv-to-json" class="px-3 py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 text-sm font-medium">CSV → JSON</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input/Output -->
+        <div class="flex gap-4 flex-1 editor-row">
+          <div id="transform-input-pane" class="flex-1 flex flex-col gap-2 min-w-0">
+            <div class="flex justify-between items-center">
+              <label class="text-sm font-medium">Input</label>
+              <button data-expand="transform-input-pane" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium" title="Fill the window (Esc to exit)">Expand</button>
+            </div>
+            <textarea id="transform-input" class="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 font-mono text-xs" placeholder="Paste JSON, CSV, or Python literal..."></textarea>
+          </div>
+          <div id="transform-output-pane" class="flex-1 flex flex-col gap-2 min-w-0">
+            <div class="flex justify-between items-center">
+              <label class="text-sm font-medium">Output</label>
+              <div class="flex gap-2">
+                <button id="btn-copy-output" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Copy</button>
+                <button data-expand="transform-output-pane" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium" title="Fill the window (Esc to exit)">Expand</button>
+              </div>
+            </div>
+            <textarea id="transform-output" class="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 font-mono text-xs" readonly placeholder="Output will appear here..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Python to JSON Panel -->
+      <section data-panel="pytojson" class="flex-1 overflow-auto p-6 hidden flex flex-col gap-4">
+        <h2 class="text-2xl font-bold">Python → JSON</h2>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Convert Python literals (dicts, lists, tuples, etc.) to JSON</p>
+
+        <div id="pytojson-error" class="error-box hidden bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 rounded p-3 text-sm font-mono"></div>
+
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-3 text-sm">
+          <p class="font-medium mb-2">Supported syntax:</p>
+          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400 text-xs">
+            <li>Dicts: <code>{'key': value}</code></li>
+            <li>Lists: <code>[1, 2, 3]</code></li>
+            <li>Tuples: <code>(1, 2, 3)</code> or <code>(1,)</code></li>
+            <li>Strings: <code>'single'</code> or <code>"double"</code> with escapes</li>
+            <li>Numbers: <code>42</code>, <code>3.14</code>, <code>1e10</code></li>
+            <li>Booleans/Null: <code>True</code>, <code>False</code>, <code>None</code></li>
+            <li>Trailing commas allowed</li>
+          </ul>
+          <p class="text-gray-600 dark:text-gray-400 text-xs mt-2">Note: Sets, function calls, and arbitrary expressions are not supported.</p>
+        </div>
+
+        <div class="flex gap-4 flex-1 min-h-0">
+          <div class="flex-1 flex flex-col gap-2">
+            <label class="text-sm font-medium">Python Literal</label>
+            <textarea id="pytojson-input" class="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 font-mono text-xs" placeholder="Paste Python literals here..."></textarea>
+          </div>
+          <div class="flex-1 flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+              <label class="text-sm font-medium">JSON Output</label>
+              <button id="btn-copy-py-output" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Copy</button>
+            </div>
+            <textarea id="pytojson-output" class="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 font-mono text-xs" readonly placeholder="JSON output will appear here..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Base64 Converter Panel -->
+      <section data-panel="base64" class="flex-1 overflow-auto p-6 hidden flex flex-col gap-4">
+        <h2 class="text-2xl font-bold">Base64 Encoder/Decoder</h2>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Encode text to Base64 or decode Base64 to text</p>
+
+        <div id="base64-error" class="error-box hidden bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 rounded p-3 text-sm font-mono"></div>
+
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-4 space-y-3">
+          <div class="flex gap-2 items-center">
+            <label class="text-sm font-medium">Mode:</label>
+            <select id="base64-mode" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+              <option value="standard">Standard (RFC 4648)</option>
+              <option value="url-safe">URL-Safe (RFC 4648 Section 5)</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-encode-base64" class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 text-sm font-medium">Encode</button>
+            <button id="btn-decode-base64" class="px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 text-sm font-medium">Decode</button>
+          </div>
+          <p class="text-xs text-gray-600 dark:text-gray-400">
+            <strong>Standard:</strong> Uses <code class="bg-gray-200 dark:bg-gray-800 px-1 rounded">+/=</code> |
+            <strong>URL-Safe:</strong> Uses <code class="bg-gray-200 dark:bg-gray-800 px-1 rounded">-_</code> (no padding)
+          </p>
+        </div>
+
+        <div class="flex gap-4 flex-1 min-h-0">
+          <div class="flex-1 flex flex-col gap-2">
+            <label class="text-sm font-medium">Input</label>
+            <textarea id="base64-input" class="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 font-mono text-xs" placeholder="Paste text or Base64 here..."></textarea>
+          </div>
+          <div class="flex-1 flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+              <label class="text-sm font-medium">Output</label>
+              <button id="btn-copy-base64-output" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Copy</button>
+            </div>
+            <textarea id="base64-output" class="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-3 font-mono text-xs" readonly placeholder="Output will appear here..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Image Annotator Panel -->
+      <section data-panel="annotate" class="flex-1 overflow-hidden p-6 hidden flex flex-col gap-4">
+        <h2 class="text-2xl font-bold">Image Annotator</h2>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Paste, drop, or upload an image, then draw on it. Everything stays in your browser.</p>
+
+        <div id="annotate-error" class="error-box hidden bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 rounded p-3 text-sm font-mono"></div>
+
+        <!-- Toolbar -->
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-4 flex flex-wrap gap-6 items-start">
+          <div>
+            <label class="text-sm font-medium block mb-1">Tool</label>
+            <div class="flex gap-2">
+              <button data-annotate-tool="rect" class="px-3 py-1.5 rounded text-sm font-medium">Rectangle</button>
+              <button data-annotate-tool="arrow" class="px-3 py-1.5 rounded text-sm font-medium">Arrow</button>
+              <button data-annotate-tool="pen" class="px-3 py-1.5 rounded text-sm font-medium">Pen</button>
+              <button data-annotate-tool="text" class="px-3 py-1.5 rounded text-sm font-medium">Text</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium block mb-1">Color</label>
+            <div class="flex gap-2 items-center">
+              <button data-annotate-color="#ef4444" class="w-7 h-7 rounded-full ring-offset-1 ring-gray-900 dark:ring-white dark:ring-offset-gray-900" style="background:#ef4444" title="Red"></button>
+              <button data-annotate-color="#f59e0b" class="w-7 h-7 rounded-full ring-offset-1 ring-gray-900 dark:ring-white dark:ring-offset-gray-900" style="background:#f59e0b" title="Amber"></button>
+              <button data-annotate-color="#22c55e" class="w-7 h-7 rounded-full ring-offset-1 ring-gray-900 dark:ring-white dark:ring-offset-gray-900" style="background:#22c55e" title="Green"></button>
+              <button data-annotate-color="#3b82f6" class="w-7 h-7 rounded-full ring-offset-1 ring-gray-900 dark:ring-white dark:ring-offset-gray-900" style="background:#3b82f6" title="Blue"></button>
+              <button data-annotate-color="#111827" class="w-7 h-7 rounded-full ring-offset-1 ring-gray-900 dark:ring-white dark:ring-offset-gray-900" style="background:#111827" title="Black"></button>
+              <input id="annotate-color" type="color" value="#ef4444" class="w-9 h-8 p-0 border border-gray-300 dark:border-gray-700 rounded cursor-pointer bg-transparent" title="Custom color">
+            </div>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium block mb-1">Stroke</label>
+            <select id="annotate-width">
+              <option value="2">Thin</option>
+              <option value="4" selected>Medium</option>
+              <option value="8">Thick</option>
+              <option value="14">Extra thick</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium block mb-1">Text size</label>
+            <select id="annotate-font-size">
+              <option value="18">Small</option>
+              <option value="28" selected>Medium</option>
+              <option value="44">Large</option>
+              <option value="72">Huge</option>
+            </select>
+          </div>
+
+          <div class="flex-1 min-w-full lg:min-w-0 flex flex-wrap gap-2 items-center lg:justify-end lg:self-end">
+            <label class="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium cursor-pointer">
+              Upload
+              <input id="annotate-file" type="file" accept="image/*" class="hidden">
+            </label>
+            <button id="btn-annotate-undo" class="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium">Undo</button>
+            <button id="btn-annotate-clear" class="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium">Clear marks</button>
+            <button id="btn-annotate-reset" class="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium">Remove image</button>
+            <button id="btn-annotate-copy" class="px-3 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 text-sm font-medium">Copy image</button>
+            <button id="btn-annotate-download" class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 text-sm font-medium">Download PNG</button>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+          <span>Drag to draw &middot; Text tool: click, type, press Enter &middot; Cmd/Ctrl+Z to undo</span>
+          <span id="annotate-info" class="font-mono"></span>
+        </div>
+
+        <!-- Stage -->
+        <div id="annotate-stage" class="flex-1 min-h-0 overflow-auto bg-gray-100 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded p-4 flex items-start justify-center">
+          <div id="annotate-dropzone" class="w-full h-full min-h-48 border-2 border-dashed border-gray-400 dark:border-gray-600 rounded flex flex-col items-center justify-center gap-2 text-center text-gray-500 dark:text-gray-400">
+            <p class="text-base font-medium">Paste an image (Cmd/Ctrl+V)</p>
+            <p class="text-sm">or drop a file here, or use Upload</p>
+          </div>
+          <div id="annotate-canvas-wrap" class="relative inline-block hidden">
+            <canvas id="annotate-canvas" class="max-w-full block shadow"></canvas>
+            <input id="annotate-text-input" type="text" class="hidden absolute z-10 bg-white/90 dark:bg-gray-900/90 border border-blue-500" placeholder="Type, then Enter">
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script defer src="js/utils.js"></script>
+  <script defer src="js/json-viewer.js"></script>
+  <script defer
+          src="https://unpkg.com/jsonpath-plus@11.2.1/dist/index-browser-umd.min.cjs"
+          integrity="sha384-h3xv/3ZiqpHVkzZ+2RqpDREQ8QGFQz4xFNCzZv5TMUgumWQ1kVfiyIPhxlEr73Dr"
+          crossorigin="anonymous"></script>
+  <script defer src="js/json-transform.js"></script>
+  <script defer src="js/py-to-json.js"></script>
+  <script defer src="js/base64-converter.js"></script>
+  <script defer src="js/image-annotator.js"></script>
+  <script defer src="js/app.js"></script>
+</body>
+</html>
