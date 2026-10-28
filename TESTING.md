@@ -13,7 +13,7 @@ This document outlines test cases for verifying the devtools application works c
 ### General / Navigation
 
 - [ ] **Page loads without errors** - Check browser console (F12 → Console) for any errors
-- [ ] **Sidebar navigation works** - Click each of the five buttons (JSON Viewer, JSON Transform, Python → JSON, Base64, Image Annotator) and confirm the correct panel is shown
+- [ ] **Sidebar navigation works** - Click each of the six buttons (JSON Viewer, JSON Transform, Python → JSON, Base64, Date & Time, Image Annotator) and confirm the correct panel is shown
 - [ ] **Active tab styling** - The current tab button should have blue background, others should be gray
 - [ ] **Persistent state** - Click a different tab, reload the page (F5), confirm the same tab is still active
 - [ ] **Dark mode** - Toggle your OS dark mode (or use Chrome DevTools → Rendering → Emulate CSS media) and confirm the page has good contrast and proper color scheme in both modes

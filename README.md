@@ -208,6 +208,16 @@ Mark up a screenshot right in the browser — paste, draw, copy back out. No upl
 - The canvas is always the image's natural pixel size and scaled down with CSS, so exports are full resolution regardless of zoom
 - Pointer coordinates are mapped through the display-to-canvas scale factor, so drawing stays accurate on a scaled-down image
 
+### 6. Date & Time
+Epoch conversion and date arithmetic in one panel. Everything recalculates as you type.
+
+- **Live clock** — current epoch in seconds and milliseconds plus ISO 8601, each with a Copy button
+- **Epoch ⇄ Date** — one input that takes an epoch number (unit auto-detected by digit count: s / ms / µs / ns, or pick one), an ISO 8601 date (`2026-10-29T14:30:00Z`, `2026-10-29 09:00`, `+05:30` offsets), anything `Date.parse` understands, or `now`. It shows Unix s/ms/µs/ns, ISO (UTC and local with offset), RFC 7231, local time, an optional extra IANA time zone, relative time, day of week, day of year and ISO week
+- **Add / Subtract** — add or subtract years, months, weeks, days, hours, minutes and seconds from a start date. Calendar units follow the calendar (Jan 31 + 1 month = Feb 28/29, and DST-safe "same time tomorrow"); time units add exact elapsed time
+- **Difference** — time between two dates as a calendar breakdown (years, months, days, h/m/s), totals in weeks/days/hours/minutes/seconds/ms, and business days (Mon–Fri)
+- **Interpret dates as Local / UTC** — sets how dates without an offset are read and which calendar the day math uses
+- Nanosecond and microsecond epochs are parsed with `BigInt`, so precision isn't lost before truncating to JavaScript's millisecond resolution
+
 ## Usage
 
 ### Opening the App
@@ -247,6 +257,7 @@ devtools/
 │   ├── json-viewer.js        # Tool 2: tree rendering and collapse/expand
 │   ├── json-transform.js     # Tool 3: all transformation operations
 │   ├── image-annotator.js    # Tool 5: canvas image annotation
+│   ├── datetime-tool.js      # Tool 6: epoch conversion + date calculations
 │   └── py-to-json.js         # Tool 4: Python literal tokenizer + parser
 └── README.md               # This file
 ```

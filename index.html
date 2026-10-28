@@ -24,6 +24,9 @@
       <button data-tool="base64" class="px-4 py-2 rounded text-left font-medium transition-colors">
         Base64
       </button>
+      <button data-tool="datetime" class="px-4 py-2 rounded text-left font-medium transition-colors">
+        Date &amp; Time
+      </button>
       <button data-tool="annotate" class="px-4 py-2 rounded text-left font-medium transition-colors">
         Image Annotator
       </button>
@@ -254,6 +257,108 @@
         </div>
       </section>
 
+      <!-- Date & Time Panel -->
+      <section data-panel="datetime" class="flex-1 overflow-auto p-6 hidden flex flex-col gap-4">
+        <h2 class="text-2xl font-bold">Date &amp; Time</h2>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Convert epoch timestamps, add or subtract durations, and measure the time between two dates</p>
+
+        <!-- Current time + global options -->
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-4 flex flex-wrap gap-6 items-end">
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Current epoch (seconds)</div>
+            <div class="flex gap-2 items-center">
+              <span id="dt-now-seconds" class="font-mono text-xl font-bold"></span>
+              <button data-dt-copy="dt-now-seconds" class="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Copy</button>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Milliseconds</div>
+            <div class="flex gap-2 items-center">
+              <span id="dt-now-ms" class="font-mono text-sm"></span>
+              <button data-dt-copy="dt-now-ms" class="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Copy</button>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">ISO 8601 (UTC)</div>
+            <div class="flex gap-2 items-center">
+              <span id="dt-now-iso" class="font-mono text-sm"></span>
+              <button data-dt-copy="dt-now-iso" class="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Copy</button>
+            </div>
+          </div>
+          <div class="flex-1 flex flex-wrap gap-4 justify-end">
+            <div>
+              <label class="text-xs block mb-1" title="Applies to dates typed without Z or an offset, and to calendar math (day boundaries, DST)">Interpret dates as</label>
+              <select id="dt-zone-mode">
+                <option id="dt-local-zone" value="local">Local</option>
+                <option value="utc">UTC</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs block mb-1">Also show in</label>
+              <select id="dt-extra-zone">
+                <option value="">(none)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Converter -->
+        <div class="border border-gray-200 dark:border-gray-800 rounded p-4 flex flex-col gap-3">
+          <h3 class="font-semibold">Epoch ⇄ Date</h3>
+          <div class="flex gap-2 flex-wrap">
+            <input id="dt-convert-input" type="text" class="flex-1 min-w-64" placeholder="1730000000, 1730000000123, 2026-10-29T14:30:00Z, 2026-10-29 09:00, now...">
+            <select id="dt-convert-unit" title="Epoch unit (auto-detected by digit count)">
+              <option value="auto">Auto unit</option>
+              <option value="s">Seconds</option>
+              <option value="ms">Milliseconds</option>
+              <option value="us">Microseconds</option>
+              <option value="ns">Nanoseconds</option>
+            </select>
+            <button id="btn-dt-convert-now" class="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 text-sm font-medium">Now</button>
+          </div>
+          <div id="dt-convert-detected" class="text-xs text-gray-500 dark:text-gray-400"></div>
+          <div id="dt-convert-output" class="bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded px-3 py-1"></div>
+        </div>
+
+        <!-- Calculators -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div class="border border-gray-200 dark:border-gray-800 rounded p-4 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-semibold">Add / Subtract</h3>
+              <button id="btn-dt-add-reset" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Clear amounts</button>
+            </div>
+            <div class="flex gap-2">
+              <input id="dt-add-start" data-dt-add type="text" class="flex-1" placeholder="Start: epoch or date (empty = now)">
+              <select id="dt-add-op" data-dt-add>
+                <option value="add">+ Add</option>
+                <option value="sub">− Subtract</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-4 gap-2">
+              <label class="text-xs">Years<input id="dt-add-years" data-dt-add type="number" step="1" class="w-full mt-1" placeholder="0"></label>
+              <label class="text-xs">Months<input id="dt-add-months" data-dt-add type="number" step="1" class="w-full mt-1" placeholder="0"></label>
+              <label class="text-xs">Weeks<input id="dt-add-weeks" data-dt-add type="number" step="1" class="w-full mt-1" placeholder="0"></label>
+              <label class="text-xs">Days<input id="dt-add-days" data-dt-add type="number" step="1" class="w-full mt-1" placeholder="0"></label>
+              <label class="text-xs">Hours<input id="dt-add-hours" data-dt-add type="number" class="w-full mt-1" placeholder="0"></label>
+              <label class="text-xs">Minutes<input id="dt-add-minutes" data-dt-add type="number" class="w-full mt-1" placeholder="0"></label>
+              <label class="text-xs">Seconds<input id="dt-add-seconds" data-dt-add type="number" class="w-full mt-1" placeholder="0"></label>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Years/months/weeks/days follow the calendar (Jan 31 + 1 month = Feb 28/29); hours/minutes/seconds add exact elapsed time.</p>
+            <div id="dt-add-output" class="bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded px-3 py-1"></div>
+          </div>
+
+          <div class="border border-gray-200 dark:border-gray-800 rounded p-4 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-semibold">Difference</h3>
+              <button id="btn-dt-diff-swap" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-medium">Swap</button>
+            </div>
+            <input id="dt-diff-from" data-dt-diff type="text" placeholder="From: epoch or date (empty = now)">
+            <input id="dt-diff-to" data-dt-diff type="text" placeholder="To: epoch or date (empty = now)">
+            <div id="dt-diff-output" class="bg-gray-50 dark:bg-gray-950 border border-gray-300 dark:border-gray-700 rounded px-3 py-1"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- Image Annotator Panel -->
       <section data-panel="annotate" class="flex-1 overflow-hidden p-6 hidden flex flex-col gap-4">
         <h2 class="text-2xl font-bold">Image Annotator</h2>
@@ -348,6 +453,7 @@
   <script defer src="js/json-transform.js"></script>
   <script defer src="js/py-to-json.js"></script>
   <script defer src="js/base64-converter.js"></script>
+  <script defer src="js/datetime-tool.js"></script>
   <script defer src="js/image-annotator.js"></script>
   <script defer src="js/app.js"></script>
 </body>

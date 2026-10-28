@@ -11,10 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
           DevTools.JSONViewer.onShow();
         } else if (toolName === 'transform' && DevTools.JSONTransform.onShow) {
           DevTools.JSONTransform.onShow();
+        } else if (toolName === 'datetime') {
+          DevTools.DateTimeTool.onShow();
         }
       } else {
         if (panel.dataset.panel === 'transform' && DevTools.JSONTransform.onHide) {
           DevTools.JSONTransform.onHide();
+        } else if (panel.dataset.panel === 'datetime') {
+          DevTools.DateTimeTool.onHide();
         }
         panel.classList.add('hidden');
       }
@@ -46,5 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
   DevTools.JSONTransform.init();
   DevTools.PyToJson.init?.();
   DevTools.Base64Converter.init?.();
+  DevTools.DateTimeTool.init?.();
   DevTools.ImageAnnotator.init?.();
 });
