@@ -235,6 +235,20 @@ Epoch conversion and date arithmetic in one panel. Everything recalculates as yo
 - **Python Converter**: Paste Python literal syntax → converts to formatted JSON. Supports live debounced conversion.
 - **Image Annotator**: Paste a screenshot, pick a tool and color, drag to draw. Serve over `localhost` if you want "Copy image" to work — clipboard image writes need a secure context.
 
+## Releasing
+
+Releases go out with the local `deploy.ps1` script, not with `git push`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy.ps1
+```
+
+The script copies `index.html`, `css/` and `js/` into a staging folder and adds `?v=<timestamp>` to the local CSS/JS links so browsers and the CDN load the new version. It then uploads the bundle over SSH and replaces the live files on the server.
+
+`deploy.ps1` is **not committed**: it contains private server details, and `deploy*` is in `.gitignore`. Ask the maintainer for a copy. Its temporary outputs (`.release/`, `devtools-release.tar.gz`) are ignored too and cleaned up after every run.
+
+Before releasing: test the change locally (`python -m http.server`), then commit and push to `main` so the repository matches what's deployed.
+
 ## Architecture
 
 ### Dependencies
