@@ -4,7 +4,7 @@ This document outlines test cases for verifying the devtools application works c
 
 ## Setup
 
-1. Start the server: `python3 -m http.server 8000` in this directory
+1. Start the server: `python3 -m http.server 8000` in the repo root
 2. Open http://localhost:8000 in a modern browser
 3. Optionally test with dark mode: toggle your OS dark mode setting while the app is open, or use browser DevTools to simulate it
 
@@ -628,10 +628,76 @@ Most cases below use this document, referred to as **the store doc**:
 
 ---
 
+## Tool 6: Date & Time
+
+> Expected values below assume **Interpret dates as: Local**; times shown in your own zone will differ, but the UTC/epoch values must match exactly.
+
+### Live Clock
+
+- [ ] **Clock ticks** - Open the panel and watch for a few seconds
+  Expected: Epoch seconds, milliseconds and ISO time update every second
+- [ ] **Clock pauses when hidden** - Switch to another tab and back
+  Expected: Clock resumes at the current time (no burst of catch-up updates)
+- [ ] **Copy** - Click **Copy** next to the epoch seconds
+  Expected: Button shows "Copied!"; clipboard holds the number
+
+### Epoch ⇄ Date
+
+- [ ] **Seconds** - Input: `1730000000`
+  Expected: "Read as epoch seconds"; ISO 8601 (UTC) = `2024-10-27T03:33:20.000Z`
+- [ ] **Milliseconds** - Input: `1730000000123`
+  Expected: "Read as epoch milliseconds"; ISO = `2024-10-27T03:33:20.123Z`
+- [ ] **Nanoseconds** - Input: `1730000000123456789`
+  Expected: "Read as epoch nanoseconds"; Unix milliseconds = `1730000000123` (no precision loss)
+- [ ] **Forced unit** - Input: `1730000000`, unit **Milliseconds**
+  Expected: ISO = `1970-01-21T00:33:20.000Z`
+- [ ] **ISO with Z** - Input: `2026-10-29T14:30:00Z`
+  Expected: Unix seconds = `1793284200`
+- [ ] **ISO with offset** - Input: `2026-10-29T14:30:00+05:30`
+  Expected: ISO (UTC) = `2026-10-29T09:00:00.000Z`
+- [ ] **No offset + UTC mode** - Switch to **UTC**, input `2026-10-29 14:30`
+  Expected: ISO (UTC) = `2026-10-29T14:30:00.000Z`; in Local mode it shifts by your offset instead
+- [ ] **Now button** - Click **Now**
+  Expected: Input fills with the current epoch seconds; Relative = "now" or a few seconds ago
+- [ ] **Extra zone** - Pick `Asia/Tokyo` in **Also show in**
+  Expected: An `Asia/Tokyo` row appears with a `GMT+09:00` time, in all three result boxes
+- [ ] **Invalid date** - Input: `2026-02-30`
+  Expected: Error `Invalid date: "2026-02-30"` (not silently rolled to March)
+- [ ] **Garbage** - Input: `hello`
+  Expected: "Could not parse" error with format hints
+
+### Add / Subtract
+
+- [ ] **Month clamping** - Start `2024-01-31T10:00`, **+ Add**, Months `1`
+  Expected: Result is Feb 29, 2024 10:00 local
+- [ ] **Subtract** - Same start, **− Subtract**, Days `31`
+  Expected: Dec 31, 2023 10:00 local
+- [ ] **Exact time units** - Start `2026-10-29T00:00Z`, Hours `36`
+  Expected: ISO (UTC) = `2026-10-30T12:00:00.000Z`
+- [ ] **Empty start** - Clear the start field, Days `1`
+  Expected: Result is this time tomorrow; Relative = "tomorrow"
+- [ ] **Clear amounts** - Click **Clear amounts**
+  Expected: All amount fields empty; result equals the start
+
+### Difference
+
+- [ ] **Calendar breakdown** - From `2024-01-31`, To `2026-10-29T14:30:15`
+  Expected: Calendar = `2 years, 8 months, 29 days, 14 hours, 30 minutes, 15 seconds`; Business days = `716`
+- [ ] **One week** - From `2026-03-02`, To `2026-03-09`
+  Expected: Total days = `7` (6.9583 in Local mode if a DST change falls in between), Business days = `5`
+- [ ] **Negative** - From `2026-10-29`, To `2026-10-22`
+  Expected: Direction says "To" is before "From"; totals are negative; Calendar = `− 7 days`
+- [ ] **Swap** - Click **Swap**
+  Expected: Fields swap and the result flips sign
+- [ ] **Same instant** - From and To both `2026-01-01`
+  Expected: Direction = "Same instant"; Calendar = "No difference"
+
+---
+
 ## Final Checklist
 
 - [ ] No JavaScript errors in browser console (F12 → Console)
-- [ ] All five tools load without lag
+- [ ] All six tools load without lag
 - [ ] Keyboard navigation works (Tab key moves focus between inputs, Enter submits buttons where applicable)
 - [ ] Resize browser window and confirm layout remains usable on narrow screens
 - [ ] Test in both light and dark modes

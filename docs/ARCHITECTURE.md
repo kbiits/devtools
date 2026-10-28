@@ -2,7 +2,7 @@
 
 ## Project Goals
 
-Build a fully static, client-side-only devtools web application with zero build steps, no external dependencies (except Tailwind CDN for styling), and no package managers or Node.js required.
+Build a fully static, client-side-only devtools web application with zero build steps, minimal external dependencies (Tailwind CDN for styling, JSONPath-Plus for JSONPath), and no package managers or Node.js required.
 
 ## Tech Stack
 
@@ -23,22 +23,22 @@ Build a fully static, client-side-only devtools web application with zero build 
 
 ```
 devtools/
-├── index.html                 # Main UI: sidebar nav + 5 tool panels
+├── index.html                 # Main UI: sidebar nav + 6 tool panels
 ├── css/
 │   └── app.css                # Custom CSS: tree rendering, dark mode, form styling
 ├── js/
 │   ├── utils.js               # Shared utilities across all tools
 │   ├── app.js                 # App shell: nav, tab switching, localStorage
-│   ├── json-viewer.js         # Tool 1: tree rendering and collapse/expand
-│   ├── json-transform.js      # Tool 2: format, sort, extract, case-convert, escape, CSV
-│   ├── py-to-json.js          # Tool 3: Python literal tokenizer + parser
-│   ├── base64-converter.js    # Tool 4: Base64 encode/decode (standard + URL-safe)
-│   └── image-annotator.js     # Tool 5: canvas image annotation (shapes, text, export)
+│   ├── json-viewer.js         # JSON Viewer: tree rendering and collapse/expand
+│   ├── json-transform.js      # JSON Transform: format, sort, extract, case-convert, escape, CSV
+│   ├── py-to-json.js          # Python → JSON: literal tokenizer + parser
+│   ├── base64-converter.js    # Base64: encode/decode (standard + URL-safe)
+│   ├── datetime-tool.js       # Date & Time: epoch conversion, date add/subtract, difference
+│   └── image-annotator.js     # Image Annotator: canvas annotation (shapes, text, export)
+├── docs/                      # QUICKSTART, ARCHITECTURE (this file), TESTING, RELEASING
 ├── README.md                  # Full feature documentation
-├── QUICKSTART.md              # Getting started guide
-├── TESTING.md                 # Manual test cases
-├── ARCHITECTURE.md            # This file
-└── (no package.json, no build tools)
+├── CLAUDE.md                  # Guide for AI coding agents
+└── (no package.json, no build tools; deploy.ps1 is local-only, see RELEASING.md)
 ```
 
 ## Module Organization
@@ -109,6 +109,15 @@ Python literal to JSON converter (no eval() anywhere):
 
 Implementation uses only string scanning and manual object/array construction. No eval/Function anywhere.
 
+### datetime-tool.js
+Epoch conversion and date arithmetic, all recalculated live on `input`/`change`:
+- **Parsing** (`parseInput`) — `now`, epoch numbers (unit auto-detected by digit count: ≤11 s, ≤14 ms, ≤17 µs, else ns; µs/ns go through `BigInt` to keep precision), ISO 8601 via a strict regex (range-checked, so `2026-02-30` is rejected rather than rolled over), then `Date.parse` as a fallback
+- **Zone mode** — the "Interpret dates as" Local/UTC select decides how offset-less dates are read and which calendar (`getX` vs `getUTCX`) the day math uses; `parts()`/`make()` hide that switch
+- **Add/subtract** — years/months/weeks/days step through the calendar (`addMonths` clamps to month end, `addDays` keeps wall-clock time across DST); hours/minutes/seconds add exact milliseconds
+- **Difference** — `calendarDiff` peels off months, then days, then exact time; `businessDays` counts Mon–Fri calendar dates in `[from, to)`
+- **Live clock** — a 1s `setInterval` that runs only while the panel is visible (`onShow`/`onHide` from `app.js`)
+- Results are rendered with `createElement` + `textContent`
+
 ## Data Flow
 
 ### JSON Viewer
@@ -147,7 +156,7 @@ User input → debounce(300ms) → DevTools.PyToJson.convert() ──→ tokeniz
 
 ### localStorage
 - **Key**: `activeTool` — which tab the user was last viewing
-- **Value**: `'viewer'` | `'transform'` | `'pytojson'`
+- **Value**: `'viewer'` | `'transform'` | `'pytojson'` | `'base64'` | `'datetime'` | `'annotate'`
 - **Purpose**: Restore tab state across page reloads
 
 ### Module-level state
@@ -195,21 +204,21 @@ Adding a new tool:
 2. Add a button in the sidebar with `data-tool="newtool"`
 3. Add a `<section data-panel="newtool">` in the main area
 4. Import the script in `index.html`
-5. Call the init function in `app.js`
+5. Call the init function in `app.js` (and wire `onShow`/`onHide` in `showPanel` if the tool runs timers or listeners that should pause while hidden)
+6. Document it in the root README, add a section to [TESTING.md](TESTING.md), and update the tool lists in [docs/README.md](README.md) and this file
 
 The architecture naturally extends — no monolithic app state or tight coupling.
 
 ## Testing
 
 Since there's no test framework:
-- Manual testing via TESTING.md (comprehensive checklist of all features)
-- Syntax validation: `node -c js/*.js`
+- Manual testing via [TESTING.md](TESTING.md) (comprehensive checklist of all features)
+- Syntax validation: `node --check js/<file>.js`
 - Manual inspection of tree rendering, error messages, etc. in a browser
 
-For production deployment, consider adding:
+Deployment is covered in [RELEASING.md](RELEASING.md). Worth considering later:
 - Browser-based test framework (Playwright, Cypress)
 - Minification/compression (single index.html, bundled CSS/JS)
-- GitHub Pages or static host deployment
 
 ## Future Enhancements
 
@@ -217,7 +226,6 @@ Possible extensions that fit the "static, vanilla, zero-build" philosophy:
 - **YAML viewer/converter**
 - **SQL formatter** (for SELECT statements)
 - **XML/HTML tree viewer**
-- **Base64 encode/decode**
 - **Regex tester with visualizer**
 - **Color picker and palette generator**
 - **Markdown to HTML previewer**

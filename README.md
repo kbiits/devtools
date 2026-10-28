@@ -237,17 +237,15 @@ Epoch conversion and date arithmetic in one panel. Everything recalculates as yo
 
 ## Releasing
 
-Releases go out with the local `deploy.ps1` script, not with `git push`:
+Releases are deployed with the local `deploy.ps1` script (`powershell -ExecutionPolicy Bypass -File .\deploy.ps1`), not with `git push`. The script contains private server details, so it isn't committed. See [docs/RELEASING.md](docs/RELEASING.md) for the full steps.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\deploy.ps1
-```
+## Documentation
 
-The script copies `index.html`, `css/` and `js/` into a staging folder and adds `?v=<timestamp>` to the local CSS/JS links so browsers and the CDN load the new version. It then uploads the bundle over SSH and replaces the live files on the server.
-
-`deploy.ps1` is **not committed**: it contains private server details, and `deploy*` is in `.gitignore`. Ask the maintainer for a copy. Its temporary outputs (`.release/`, `devtools-release.tar.gz`) are ignored too and cleaned up after every run.
-
-Before releasing: test the change locally (`python -m http.server`), then commit and push to `main` so the repository matches what's deployed.
+- [docs/QUICKSTART.md](docs/QUICKSTART.md): run the app and try each tool
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): module layout, data flow, adding a tool
+- [docs/TESTING.md](docs/TESTING.md): manual test checklist
+- [docs/RELEASING.md](docs/RELEASING.md): deploying a new version
+- [docs/README.md](docs/README.md): index of all docs
 
 ## Architecture
 
@@ -273,6 +271,8 @@ devtools/
 │   ├── image-annotator.js    # Tool 5: canvas image annotation
 │   ├── datetime-tool.js      # Tool 6: epoch conversion + date calculations
 │   └── py-to-json.js         # Tool 4: Python literal tokenizer + parser
+├── docs/                   # Quick start, architecture, testing, releasing
+├── CLAUDE.md               # Guide for AI coding agents working in this repo
 └── README.md               # This file
 ```
 

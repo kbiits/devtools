@@ -3,8 +3,8 @@
 ## Install & Run
 
 ### Option 1: Simple HTTP Server (Recommended)
+From the repo root:
 ```bash
-cd /Users/nabiel.syarif/Developments/devtools
 python3 -m http.server 8000
 ```
 Then open http://localhost:8000 in your browser.
@@ -33,6 +33,8 @@ ruby -run -ehttpd . -p8000
 2. **JSON Viewer** - Paste JSON → interactive collapsible tree with syntax highlighting
 3. **JSON Transformer** - Format, minify, sort, extract (JSONPath), convert case, escape/unescape, CSV conversion
 4. **Python → JSON** - Convert Python literals (dicts, lists, tuples, etc.) to JSON
+5. **Date & Time** - Epoch ⇄ date conversion, add/subtract durations, difference between two dates
+6. **Image Annotator** - Paste a screenshot, draw boxes/arrows/text, copy or download the PNG
 
 ## Try It Now
 
@@ -81,21 +83,29 @@ ruby -run -ehttpd . -p8000
    }
    ```
 
+### Example 5: Epoch and date math
+1. Click **Date & Time** tab
+2. Paste `1730000000` into **Epoch ⇄ Date**: it's read as seconds and shown as ISO, local time, relative time and more
+3. Paste `2026-10-29T14:30:00Z` instead to go the other way and get the epoch values
+4. In **Add / Subtract**, set start `2024-01-31` and Months `1`, which gives Feb 29, 2024 (the day is clamped to the end of the month)
+5. In **Difference**, set From `2026-01-01` and To `2026-12-25` to see the calendar breakdown, totals and business days
+
 ## Features
 
 - ✅ **Fully client-side** - no server processing, all data stays local
 - ✅ **No build step** - pure HTML/CSS/JS, works immediately
-- ✅ **No dependencies** - only Tailwind CSS from CDN (everything else is vanilla)
+- ✅ **No dependencies to install** - only Tailwind CSS and JSONPath-Plus from a CDN (everything else is vanilla)
 - ✅ **Dark mode** - automatically follows system preference
 - ✅ **Persistent state** - remembers which tool you were using
 - ✅ **Works offline** - except for the Tailwind CDN script load
 
 ## Documentation
 
-- **Full feature docs**: See [README.md](README.md)
+- **Full feature docs**: See [README.md](../README.md)
 - **Detailed test cases**: See [TESTING.md](TESTING.md)
-- **JSONPath syntax**: See [README.md#jsonpath-query](README.md#jsonpath-query)
-- **Key case conversion**: See [README.md#key-case-conversion](README.md#key-case-conversion)
+- **JSONPath syntax**: See [README.md#jsonpath-query](../README.md#jsonpath-query)
+- **Key case conversion**: See [README.md#key-case-conversion](../README.md#key-case-conversion)
+- **All docs**: See [docs/README.md](README.md)
 
 ## Browser Support
 
