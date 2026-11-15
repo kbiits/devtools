@@ -447,13 +447,29 @@
       <!-- OCR Panel -->
       <section data-panel="ocr" class="flex-1 overflow-hidden p-6 hidden flex flex-col gap-4">
         <h2 class="text-2xl font-bold">OCR</h2>
-        <p class="text-gray-600 dark:text-gray-400 text-sm">Paste, drop, or upload an image, then extract text from a selected region or the whole image. Recognition runs in your browser; only the OCR engine and language data are downloaded.</p>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Paste, drop, or upload an image, then extract text from a selected region or the whole image. Recognition runs in your browser with PaddleOCR or Tesseract; only the engine and its model files are downloaded.</p>
 
         <div id="ocr-error" class="error-box hidden bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 rounded p-3 text-sm font-mono"></div>
 
         <!-- Toolbar -->
         <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded p-4 flex flex-wrap gap-6 items-end">
           <div>
+            <label class="text-sm font-medium block mb-1" for="ocr-engine">Engine</label>
+            <select id="ocr-engine">
+              <option value="paddle" selected>PaddleOCR</option>
+              <option value="tesseract">Tesseract</option>
+            </select>
+          </div>
+
+          <div data-ocr-engine-opts="paddle">
+            <label class="text-sm font-medium block mb-1" for="ocr-paddle-model">Model</label>
+            <select id="ocr-paddle-model" title="Covers Latin-script languages, Chinese and Japanese. For Arabic, Cyrillic, Korean or Hindi, switch the engine to Tesseract.">
+              <option value="v6-small" selected>PP-OCRv6 small (accurate, ~30 MB)</option>
+              <option value="v6-tiny">PP-OCRv6 tiny (faster, ~6 MB)</option>
+            </select>
+          </div>
+
+          <div data-ocr-engine-opts="tesseract" class="hidden">
             <label class="text-sm font-medium block mb-1" for="ocr-lang">Language</label>
             <select id="ocr-lang">
               <option value="eng" selected>English</option>

@@ -696,7 +696,24 @@ Most cases below use this document, referred to as **the store doc**:
 
 ## Tool 7: OCR
 
-> Needs network access the first time (Tesseract.js worker, WASM core and language data come from jsDelivr). A screenshot of this README makes a good test image.
+> Needs network access the first time each engine/model is used (PaddleOCR.js, ONNX Runtime and OpenCV.js from jsDelivr plus models from `paddle-model-ecology.bj.bcebos.com`; Tesseract.js worker, core and language data from jsDelivr). A screenshot of this README makes a good test image. Unless a test says otherwise, run it with both engines.
+
+### Engines
+
+- [ ] **Default engine** - Clear site data (or run `localStorage.removeItem('ocrEngine')`) and reload
+  Expected: **Engine** = PaddleOCR, **Model** select visible, **Language** select hidden
+- [ ] **Switch engine** - Choose **Tesseract**
+  Expected: **Model** hides, **Language** shows; after a reload Tesseract is still selected
+- [ ] **PaddleOCR first run** - With PaddleOCR / PP-OCRv6 small, click **OCR whole image**
+  Expected: Status "Loading PaddleOCR and its model (~30 MB, first run only)...", then "Recognizing...", then "Done in Xs · confidence N%". Console has no ONNX Runtime "Removing initializer" spam
+- [ ] **Reading order** - OCR an image with two pieces of text side by side on one row (e.g. `Name: Alice` on the left and `Total: 12.50` on the right)
+  Expected: PaddleOCR puts them on the same output line, left one first
+- [ ] **Accents and CJK** - OCR `Café crème, Straße über München` and `你好世界 こんにちは` with PaddleOCR
+  Expected: Read exactly, no language selection needed
+- [ ] **Tiny model** - Switch **Model** to PP-OCRv6 tiny and run again
+  Expected: The ~6 MB model downloads and Latin text is still read correctly
+- [ ] **Paddle offline** - Block `cdn.jsdelivr.net` before the first PaddleOCR run and click **OCR whole image**
+  Expected: Error says PaddleOCR failed to load and suggests Tesseract; after unblocking, the next run works without a reload
 
 ### Loading an Image
 
@@ -729,7 +746,7 @@ Most cases below use this document, referred to as **the store doc**:
   Expected: Selection cleared
 - [ ] **Append** - Check **Append to previous results**, OCR two different regions
   Expected: Both texts are in the box, separated by a blank line; unchecked, the second replaces the first
-- [ ] **Language** - Switch to another language (e.g. French) and run again
+- [ ] **Tesseract language** - With Tesseract, switch to another language (e.g. French) and run again
   Expected: Status says it's loading language data, then recognition completes; the network tab shows `fra.traineddata.gz`
 - [ ] **Blank region** - Select an area with no text
   Expected: Status "No text found…", no error
@@ -743,7 +760,7 @@ Most cases below use this document, referred to as **the store doc**:
 - [ ] **Clear** - Click **Clear**
   Expected: Results box empty
 - [ ] **Offline** - Block `cdn.jsdelivr.net` (DevTools → Network request blocking) and reload
-  Expected: Running OCR shows an error that the engine failed to load; other tools still work
+  Expected: Running OCR with either engine shows an error that the engine failed to load; other tools still work
 
 ---
 

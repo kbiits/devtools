@@ -94,14 +94,15 @@ ruby -run -ehttpd . -p8000
 ### Example 6: OCR
 1. Click **OCR** tab
 2. Take a screenshot of some text and press Cmd/Ctrl+V
-3. Drag a box around a paragraph: the text appears on the right (the first run takes a few seconds to download the engine)
+3. Drag a box around a paragraph: the text appears on the right (the first run takes a few seconds to download the PaddleOCR model, ~30 MB)
 4. Click **Copy**, or **OCR whole image** to read everything
+5. For Arabic, Cyrillic, Korean or Hindi text, switch **Engine** to **Tesseract** and pick the language
 
 ## Features
 
 - ✅ **Fully client-side** - no server processing, all data stays local
 - ✅ **No build step** - pure HTML/CSS/JS, works immediately
-- ✅ **No dependencies to install** - only Tailwind CSS, JSONPath-Plus and Tesseract.js (OCR) from a CDN (everything else is vanilla)
+- ✅ **No dependencies to install** - only Tailwind CSS, JSONPath-Plus and the OCR engines (PaddleOCR.js, Tesseract.js) from a CDN (everything else is vanilla)
 - ✅ **Dark mode** - automatically follows system preference
 - ✅ **Persistent state** - remembers which tool you were using
 - ✅ **Works offline** - except for the Tailwind CDN script load

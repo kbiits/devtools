@@ -35,7 +35,7 @@ devtools/
 │   ├── base64-converter.js    # Base64: encode/decode (standard + URL-safe)
 │   ├── datetime-tool.js       # Date & Time: epoch conversion, date add/subtract, difference
 │   ├── image-annotator.js     # Image Annotator: canvas annotation (shapes, text, export)
-│   └── ocr-tool.js            # OCR: region selection + Tesseract.js text recognition
+│   └── ocr-tool.js            # OCR: region selection + PaddleOCR / Tesseract.js text recognition
 ├── docs/                      # QUICKSTART, ARCHITECTURE (this file), TESTING, RELEASING
 ├── README.md                  # Full feature documentation
 ├── CLAUDE.md                  # Guide for AI coding agents
@@ -120,11 +120,17 @@ Epoch conversion and date arithmetic, all recalculated live on `input`/`change`:
 - Results are rendered with `createElement` + `textContent`
 
 ### ocr-tool.js
-Text recognition over an image, delegated to [Tesseract.js](https://github.com/naptha/tesseract.js) v7.0.0
-(loaded from jsDelivr with a pinned version + SRI hash, exposes `window.Tesseract`):
+Text recognition over an image with one of two engines, picked in the **Engine** select (saved to `localStorage` as `ocrEngine`):
 - **Image + selection** — same load paths as the annotator (paste/drop/upload); the canvas is the image's natural size, scaled with CSS, and pointer coordinates are mapped back to image pixels. The selection is drawn as a dimmed overlay with a dashed outline
-- **Cropping** (`cropCanvas`) — the region is cut from the original `Image` (not the overlay canvas) onto a white backdrop, upscaled up to 3x so the long side approaches 1600px
-- **Worker** — one Tesseract worker, created lazily on first OCR; a language change calls `worker.reinitialize(lang)`. A failed creation is dropped so the next run retries. The worker, WASM core and `traineddata` files are fetched from jsDelivr on first use
+- **Cropping** (`cropCanvas`) — the region is cut from the original `Image` (not the overlay canvas) onto a white backdrop with a 24px margin, upscaled up to 3x so the long side approaches 1600px. Both engines get the same canvas
+- **PaddleOCR (default)** — [PaddleOCR.js](https://github.com/PaddlePaddle/PaddleOCR/tree/main/paddleocr-js) `@paddleocr/paddleocr-js@0.4.2`, an ES module, loaded with `import()` from jsDelivr's `+esm` endpoint the first time it's needed (no `<script>` tag). Details:
+  - `onnxruntime-web@1.26.0/+esm` is imported first, at the exact URL the Paddle bundle imports, so the two share one module instance; that lets us set `ort.env.logLevel = 'error'` to silence the per-model graph-cleanup warnings. `wasmPaths` points at the same ORT version's `dist/`
+  - Models are chosen by explicit name (`PP-OCRv6_small_*` or `PP-OCRv6_tiny_*`); a model change disposes the old instance
+  - Runs on the main thread: the SDK's worker mode builds a module `Worker` from the package URL, which browsers refuse cross-origin. `nextPaint()` lets the status text render before inference blocks
+  - `joinPaddleLines` rebuilds reading order from the per-line boxes: sort by vertical centre, group boxes whose centres are within half a line height into rows, sort each row by x
+  - jsDelivr generates `+esm` bundles on request, so no SRI hash is possible; the versions in both URLs are pinned
+- **Tesseract** — [Tesseract.js](https://github.com/naptha/tesseract.js) v7.0.0 (a `<script>` tag with a pinned version + SRI hash, exposes `window.Tesseract`). One worker, created lazily; a language change calls `worker.reinitialize(lang)`. The worker, WASM core and `traineddata` files come from jsDelivr
+- **Failures** — a failed import, model load or worker creation is dropped so the next run retries, and the error is shown in the panel
 - **Stale results** — each run gets an incrementing job id; a result is only written if it's still the latest job
 - Results go into an editable `<textarea>` (`.value`, never HTML); copy uses `DevTools.copyToClipboard`
 
@@ -168,6 +174,7 @@ User input → debounce(300ms) → DevTools.PyToJson.convert() ──→ tokeniz
 - **Key**: `activeTool` — which tab the user was last viewing
 - **Value**: `'viewer'` | `'transform'` | `'pytojson'` | `'base64'` | `'datetime'` | `'annotate'` | `'ocr'`
 - **Purpose**: Restore tab state across page reloads
+- **Key**: `ocrEngine` — the OCR tool's engine, `'paddle'` (default) | `'tesseract'`
 
 ### Module-level state
 - **JSONViewer**: `collapsedPaths` Set, `lastParsedValue`

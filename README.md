@@ -219,23 +219,34 @@ Epoch conversion and date arithmetic in one panel. Everything recalculates as yo
 - Nanosecond and microsecond epochs are parsed with `BigInt`, so precision isn't lost before truncating to JavaScript's millisecond resolution
 
 ### 7. OCR
-Pull text out of a screenshot or photo. Recognition runs in the browser with [Tesseract.js](https://github.com/naptha/tesseract.js); the image is never uploaded.
+Pull text out of a screenshot or photo. Recognition runs in the browser with a choice of two engines; the image is never uploaded.
 
 **Getting an image in:** paste (Cmd/Ctrl+V), drag and drop onto the image area, or **Upload**.
+
+**Engines** (the choice is remembered in `localStorage`):
+- **PaddleOCR** (default) — the official [PaddleOCR.js](https://github.com/PaddlePaddle/PaddleOCR/tree/main/paddleocr-js) SDK running PP-OCRv6 models on ONNX Runtime Web. One model reads Latin-script languages (English, French, German, Indonesian, …), Chinese and Japanese, and mixed text, with no language to pick. Noticeably more accurate than Tesseract on screenshots, accents and small text
+  - **PP-OCRv6 small** (default, ~30 MB) — most accurate
+  - **PP-OCRv6 tiny** (~6 MB) — quicker download, fine for Latin text, weaker on Chinese/Japanese
+- **Tesseract** — [Tesseract.js](https://github.com/naptha/tesseract.js) with a **Language** picker: English plus 16 others and an English + Arabic mix. Use it for scripts PaddleOCR doesn't cover here: Arabic, Cyrillic, Korean, Hindi
+
+Both download their engine and model files the first time they're used, then the browser caches them.
 
 **Recognizing text:**
 - **Select a region** — drag a box on the image. With **Run OCR when a region is drawn** checked (the default) it's read straight away; otherwise click **OCR selection**. Esc or **Clear selection** removes the box
 - **OCR whole image** reads everything
-- **Language** — English plus 16 others (Arabic, Chinese, Japanese, Korean, Indonesian, …) and an English + Arabic mix. Each language's data is downloaded the first time you use it, then cached by the browser
 - **Append to previous results** collects text from several regions in one box instead of replacing it
 
-**Results:** the text box is editable so you can fix stray characters, then **Copy** it. The status line shows timing and Tesseract's confidence score.
+**Results:** the text box is editable so you can fix stray characters, then **Copy** it. The status line shows timing and the engine's confidence score (for PaddleOCR, the average over all detected lines).
 
 **Implementation notes:**
-- The selection is cropped from the original image (not the on-screen canvas), and small crops are upscaled up to 3x before recognition, which noticeably helps with small UI text
+- The selection is cropped from the original image (not the on-screen canvas), upscaled up to 3x if small, and given a white margin, because text detectors miss lines touching the edge
 - Transparent images are flattened onto white, both on screen and for recognition, so dark text on a transparent PNG stays readable
-- One Tesseract worker is created lazily on first use and reused; changing the language reinitializes it rather than starting a new one
-- Loaded from jsDelivr: `tesseract.js@7.0.0` (pinned, SRI hash) fetches its worker, WASM core and `traineddata` language files from the same CDN on first run
+- PaddleOCR returns one box per detected text line; boxes are regrouped into rows by vertical position and joined left to right, so side-by-side text (`Name: Alice   Total: 12.50`) comes out on one line
+- PaddleOCR runs on the main thread (its worker mode can't start from a cross-origin CDN), so the page is busy for the second or two each recognition takes
+- Each engine is created lazily on first use and reused. Changing Tesseract's language reinitializes its worker; changing the PaddleOCR model disposes the old one
+- Loaded from CDNs:
+  - `tesseract.js@7.0.0` from jsDelivr (pinned, SRI hash), which fetches its worker, WASM core and `traineddata` files from jsDelivr
+  - `@paddleocr/paddleocr-js@0.4.2` through jsDelivr's `+esm` endpoint with `import()`. The version is pinned, but jsDelivr generates that bundle on request, so it can't carry an SRI hash. It pulls `onnxruntime-web@1.26.0` and OpenCV.js from jsDelivr and the model `.tar` files from Baidu's `paddle-model-ecology.bj.bcebos.com`
 
 ## Usage
 
@@ -253,7 +264,7 @@ Pull text out of a screenshot or photo. Recognition runs in the browser with [Te
 - **JSON Transformer**: Use the toolbar buttons to apply transformations. Input and output are independent (use "Copy" button to copy the output). Hit **Expand** on either pane for a full-window editor, **Esc** to come back
 - **Python Converter**: Paste Python literal syntax → converts to formatted JSON. Supports live debounced conversion.
 - **Image Annotator**: Paste a screenshot, pick a tool and color, drag to draw. Serve over `localhost` if you want "Copy image" to work — clipboard image writes need a secure context.
-- **OCR**: Paste a screenshot and drag a box around the text you want. Tight boxes around a single block of text give the best results. The first run takes a few seconds while the engine and language data download.
+- **OCR**: Paste a screenshot and drag a box around the text you want. PaddleOCR is the default and the more accurate engine; switch to Tesseract for Arabic, Cyrillic, Korean or Hindi. The first run takes a few seconds while the engine and model download.
 
 ## Releasing
 
@@ -271,9 +282,10 @@ Releases are deployed with the local `deploy.ps1` script (`powershell -Execution
 
 ### Dependencies
 - Pure HTML5 and vanilla JavaScript — no build step, no npm, no node_modules
-- Three CDN script tags: Tailwind CSS (styling), JSONPath-Plus (the JSONPath engine, pinned to v11.2.1 with an SRI hash) and Tesseract.js (the OCR engine, pinned to v7.0.0 with an SRI hash)
+- Three CDN script tags: Tailwind CSS (styling), JSONPath-Plus (the JSONPath engine, pinned to v11.2.1 with an SRI hash) and Tesseract.js (an OCR engine, pinned to v7.0.0 with an SRI hash)
+- One on-demand import: PaddleOCR.js (the default OCR engine, pinned to v0.4.2, loaded with `import()` the first time it's used)
 - Everything else — JSON parsing, Python conversion, CSV, Base64, image annotation — is hand-rolled and local
-- Works offline except for the CDN script loads; OCR additionally downloads its WASM core and language data on first use
+- Works offline except for the CDN loads; OCR additionally downloads its runtime and model files on first use
 - Single-page app with client-side tab switching
 
 ### File Structure
@@ -290,7 +302,7 @@ devtools/
 │   ├── json-transform.js     # Tool 3: all transformation operations
 │   ├── image-annotator.js    # Tool 5: canvas image annotation
 │   ├── datetime-tool.js      # Tool 6: epoch conversion + date calculations
-│   ├── ocr-tool.js           # Tool 7: region selection + Tesseract.js OCR
+│   ├── ocr-tool.js           # Tool 7: region selection + PaddleOCR / Tesseract.js OCR
 │   └── py-to-json.js         # Tool 4: Python literal tokenizer + parser
 ├── docs/                   # Quick start, architecture, testing, releasing
 ├── CLAUDE.md               # Guide for AI coding agents working in this repo
@@ -312,7 +324,7 @@ Tested on Chrome/Edge 90+, Firefox 88+, Safari 14+.
 2. **Key case conversion**: Ambiguous acronym runs (e.g., `HTTPSConnectionID`) may not split perfectly. See the algorithm description above for exact behavior.
 3. **CSV**: Cannot round-trip `null` vs. empty string (both become empty cells). Ragged rows (fewer columns than header) are padded with empty strings.
 4. **Python converter**: Limited to literal data structures; no expressions, variables, or comprehensions.
-5. **OCR**: Needs the Tesseract.js CDN and language data on first use. Accuracy depends on the image: low-resolution, skewed, handwritten or stylized text may come back garbled. It returns plain text only; table and column layout isn't preserved.
+5. **OCR**: Needs network access on first use for each engine and model (PaddleOCR's default model is ~30 MB). PaddleOCR blocks the page briefly while it recognizes, and its models here cover Latin scripts, Chinese and Japanese only. Accuracy depends on the image: low-resolution, skewed, handwritten or stylized text may come back garbled. It returns plain text only; table layout isn't preserved.
 6. **Tree view**: Very deeply nested JSON (1000+ levels) may hit recursion limits; not recommended for pathologically deep structures.
 
 ## Examples

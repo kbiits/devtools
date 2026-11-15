@@ -22,7 +22,7 @@ Documentation for the static, client-side devtools app. The project overview and
 | Base64 | `js/base64-converter.js` | UTF-8 Base64 encode/decode, standard and URL-safe |
 | Date & Time | `js/datetime-tool.js` | Live epoch clock, epoch ⇄ date conversion, add/subtract durations, difference between dates |
 | Image Annotator | `js/image-annotator.js` | Paste, drop or upload an image, then draw boxes, arrows, pen strokes and text, and export it as PNG |
-| OCR | `js/ocr-tool.js` | Paste, drop or upload an image, select a region (or use the whole image) and extract its text with Tesseract.js; copy the result |
+| OCR | `js/ocr-tool.js` | Paste, drop or upload an image, select a region (or use the whole image) and extract its text with PaddleOCR (default) or Tesseract.js; copy the result |
 
 ## Common tasks
 

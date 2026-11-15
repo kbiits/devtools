@@ -4,13 +4,30 @@ DevTools.OcrTool = (function() {
   // Small crops are upscaled before recognition; Tesseract reads text best at ~30px+ line height
   const TARGET_LONG_SIDE = 1600;
   const MAX_UPSCALE = 3;
+  // White margin around the crop; text detectors miss lines that touch the image edge
+  const CROP_PADDING = 24;
 
-  let canvas, ctx, wrap, dropzone, output, status;
+  // jsDelivr's +esm build is generated on request, so it can't carry an SRI hash; the version is pinned
+  const PADDLE_URL = 'https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm';
+  // Must match the onnxruntime-web version that the +esm build above imports. Importing the same URL
+  // gives us the same module instance, so we can configure it before PaddleOCR creates its sessions
+  const ORT_URL = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/+esm';
+  const ORT_WASM_PATH = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/dist/';
+  const PADDLE_MODELS = {
+    'v6-small': { textDetectionModelName: 'PP-OCRv6_small_det', textRecognitionModelName: 'PP-OCRv6_small_rec', size: '~30 MB' },
+    'v6-tiny': { textDetectionModelName: 'PP-OCRv6_tiny_det', textRecognitionModelName: 'PP-OCRv6_tiny_rec', size: '~6 MB' }
+  };
+  const ENGINE_KEY = 'ocrEngine';
+
+  let canvas, ctx, wrap, dropzone, output, status, engineSelect;
   let image = null;
   let region = null;     // { x, y, w, h } in image pixels
   let dragStart = null;
   let worker = null;     // Promise<Tesseract.Worker>
   let workerLang = null;
+  let paddleModule = null; // Promise<module>
+  let paddle = null;     // Promise<PaddleOCR instance>
+  let paddleModel = null;
   let jobId = 0;
   let busy = 0;
 
@@ -184,6 +201,87 @@ DevTools.OcrTool = (function() {
     });
   }
 
+  function getPaddle(model) {
+    if (!paddleModule) {
+      paddleModule = import(ORT_URL)
+        .then(ort => {
+          // The PaddleOCR models trigger dozens of harmless graph-cleanup warnings per load
+          ort.env.logLevel = 'error';
+          return import(PADDLE_URL);
+        })
+        .catch(() => {
+          paddleModule = null;
+          throw new Error('The PaddleOCR engine failed to load from the CDN. Check your connection and reload, or switch the engine to Tesseract.');
+        });
+    }
+    if (!paddle || paddleModel !== model) {
+      if (paddle) paddle.then(old => old.dispose()).catch(() => {});
+      paddleModel = model;
+      const { textDetectionModelName, textRecognitionModelName } = PADDLE_MODELS[model];
+      paddle = paddleModule.then(m => m.PaddleOCR.create({
+        textDetectionModelName,
+        textRecognitionModelName,
+        ortOptions: { backend: 'wasm', wasmPaths: ORT_WASM_PATH }
+      }));
+    }
+    const pending = paddle;
+    return pending.catch(err => {
+      if (paddle === pending) {
+        paddle = null;
+        paddleModel = null;
+      }
+      throw err;
+    });
+  }
+
+  // Paddle returns one item per detected text box; rebuild reading order by grouping boxes into rows
+  function joinPaddleLines(items) {
+    const boxes = items
+      .filter(it => it.text && it.text.trim())
+      .map(it => {
+        const ys = it.poly.map(p => p[1]);
+        const top = Math.min(...ys);
+        const bottom = Math.max(...ys);
+        return { text: it.text.trim(), left: Math.min(...it.poly.map(p => p[0])), cy: (top + bottom) / 2, h: bottom - top };
+      })
+      .sort((a, b) => a.cy - b.cy);
+
+    const rows = [];
+    boxes.forEach(b => {
+      const row = rows[rows.length - 1];
+      if (row && Math.abs(b.cy - row.cy) < Math.min(b.h, row.h) / 2) {
+        row.boxes.push(b);
+      } else {
+        rows.push({ cy: b.cy, h: b.h, boxes: [b] });
+      }
+    });
+    return rows.map(r => r.boxes.sort((a, b) => a.left - b.left).map(b => b.text).join(' ')).join('\n');
+  }
+
+  // Paddle inference runs on the main thread, so let the status text paint before it blocks
+  function nextPaint() {
+    return new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  }
+
+  function runPaddle(source, model, id) {
+    return getPaddle(model)
+      .then(ocr => {
+        if (id === jobId) setStatus('Recognizing...');
+        return nextPaint().then(() => ocr.predict(source));
+      })
+      .then(([result]) => {
+        const items = result.items || [];
+        const score = items.length ? items.reduce((sum, it) => sum + it.score, 0) / items.length : 0;
+        return { text: joinPaddleLines(items), confidence: score * 100 };
+      });
+  }
+
+  function runTesseract(source, lang) {
+    return getWorker(lang)
+      .then(w => w.recognize(source))
+      .then(({ data }) => ({ text: data.text, confidence: data.confidence }));
+  }
+
   function onProgress(m) {
     if (!busy || !m.status) return;
     const pct = typeof m.progress === 'number' ? ` ${Math.round(m.progress * 100)}%` : '';
@@ -193,15 +291,17 @@ DevTools.OcrTool = (function() {
   // Crop from the original image (not the canvas, which has the selection overlay drawn on it)
   function cropCanvas(r) {
     const k = Math.min(MAX_UPSCALE, Math.max(1, TARGET_LONG_SIDE / Math.max(r.w, r.h)));
+    const w = Math.round(r.w * k);
+    const h = Math.round(r.h * k);
     const c = document.createElement('canvas');
-    c.width = Math.round(r.w * k);
-    c.height = Math.round(r.h * k);
+    c.width = w + CROP_PADDING * 2;
+    c.height = h + CROP_PADDING * 2;
     const cctx = c.getContext('2d');
     // White backdrop so dark text on a transparent PNG doesn't become black-on-black
     cctx.fillStyle = '#ffffff';
     cctx.fillRect(0, 0, c.width, c.height);
     cctx.imageSmoothingQuality = 'high';
-    cctx.drawImage(image, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+    cctx.drawImage(image, r.x, r.y, r.w, r.h, CROP_PADDING, CROP_PADDING, w, h);
     return c;
   }
 
@@ -217,25 +317,32 @@ DevTools.OcrTool = (function() {
     hideError();
 
     const id = ++jobId;
+    const engine = engineSelect.value;
     const lang = document.getElementById('ocr-lang').value;
+    const model = document.getElementById('ocr-paddle-model').value;
     const source = cropCanvas(r);
     const started = performance.now();
 
     setBusy(1);
-    setStatus(worker && workerLang === lang ? 'Recognizing...' : 'Loading OCR engine and language data (first run only)...');
+    if (engine === 'paddle') {
+      setStatus(paddle && paddleModel === model
+        ? 'Recognizing...'
+        : `Loading PaddleOCR and its model (${PADDLE_MODELS[model].size}, first run only)...`);
+    } else {
+      setStatus(worker && workerLang === lang ? 'Recognizing...' : 'Loading Tesseract and language data (first run only)...');
+    }
 
-    getWorker(lang)
-      .then(w => w.recognize(source))
-      .then(({ data }) => {
+    (engine === 'paddle' ? runPaddle(source, model, id) : runTesseract(source, lang))
+      .then(result => {
         if (id !== jobId) return; // a newer request superseded this one
-        const text = data.text.replace(/\s+$/, '');
+        const text = result.text.replace(/\s+$/, '');
         const append = document.getElementById('ocr-append').checked && output.value.trim();
         output.value = append ? `${output.value.replace(/\s+$/, '')}\n\n${text}` : text;
 
         const secs = ((performance.now() - started) / 1000).toFixed(1);
         setStatus(text
-          ? `Done in ${secs}s · confidence ${Math.round(data.confidence)}%`
-          : `No text found (${secs}s). Try a tighter selection or another language.`);
+          ? `Done in ${secs}s · confidence ${Math.round(result.confidence)}%`
+          : `No text found (${secs}s). Try a tighter selection, or another engine or language.`);
       })
       .catch(err => {
         if (id !== jobId) return;
@@ -267,6 +374,14 @@ DevTools.OcrTool = (function() {
       .catch(() => showError('Copy failed — select the text and copy it manually'));
   }
 
+  function setEngine(engine) {
+    engineSelect.value = engine;
+    document.querySelectorAll('[data-ocr-engine-opts]').forEach(el => {
+      el.classList.toggle('hidden', el.dataset.ocrEngineOpts !== engine);
+    });
+    try { localStorage.setItem(ENGINE_KEY, engine); } catch (err) { /* storage unavailable */ }
+  }
+
   function isVisible() {
     const panel = document.querySelector('[data-panel="ocr"]');
     return panel && !panel.classList.contains('hidden');
@@ -281,6 +396,12 @@ DevTools.OcrTool = (function() {
       dropzone = document.getElementById('ocr-dropzone');
       output = document.getElementById('ocr-output');
       status = document.getElementById('ocr-status');
+      engineSelect = document.getElementById('ocr-engine');
+
+      let savedEngine = null;
+      try { savedEngine = localStorage.getItem(ENGINE_KEY); } catch (err) { /* storage unavailable */ }
+      setEngine(savedEngine === 'tesseract' ? 'tesseract' : 'paddle');
+      engineSelect.addEventListener('change', () => setEngine(engineSelect.value));
 
       canvas.addEventListener('pointerdown', onPointerDown);
       canvas.addEventListener('pointermove', onPointerMove);
