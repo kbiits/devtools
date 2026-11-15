@@ -52,4 +52,5 @@ document.addEventListener('DOMContentLoaded', () => {
   DevTools.Base64Converter.init?.();
   DevTools.DateTimeTool.init?.();
   DevTools.ImageAnnotator.init?.();
+  DevTools.OcrTool.init?.();
 });

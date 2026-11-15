@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-A static, client-side devtools web app (JSON viewer/transformer, Python → JSON, Base64, Date & Time, Image Annotator). It's plain HTML + vanilla JS, with no build step, no npm and no framework.
+A static, client-side devtools web app (JSON viewer/transformer, Python → JSON, Base64, Date & Time, Image Annotator, OCR). It's plain HTML + vanilla JS, with no build step, no npm and no framework.
 
 ## Where to look
 

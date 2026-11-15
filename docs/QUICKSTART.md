@@ -35,6 +35,7 @@ ruby -run -ehttpd . -p8000
 4. **Python → JSON** - Convert Python literals (dicts, lists, tuples, etc.) to JSON
 5. **Date & Time** - Epoch ⇄ date conversion, add/subtract durations, difference between two dates
 6. **Image Annotator** - Paste a screenshot, draw boxes/arrows/text, copy or download the PNG
+7. **OCR** - Paste an image, drag a box around some text (or OCR the whole image), copy the extracted text
 
 ## Try It Now
 
@@ -90,11 +91,17 @@ ruby -run -ehttpd . -p8000
 4. In **Add / Subtract**, set start `2024-01-31` and Months `1`, which gives Feb 29, 2024 (the day is clamped to the end of the month)
 5. In **Difference**, set From `2026-01-01` and To `2026-12-25` to see the calendar breakdown, totals and business days
 
+### Example 6: OCR
+1. Click **OCR** tab
+2. Take a screenshot of some text and press Cmd/Ctrl+V
+3. Drag a box around a paragraph: the text appears on the right (the first run takes a few seconds to download the engine)
+4. Click **Copy**, or **OCR whole image** to read everything
+
 ## Features
 
 - ✅ **Fully client-side** - no server processing, all data stays local
 - ✅ **No build step** - pure HTML/CSS/JS, works immediately
-- ✅ **No dependencies to install** - only Tailwind CSS and JSONPath-Plus from a CDN (everything else is vanilla)
+- ✅ **No dependencies to install** - only Tailwind CSS, JSONPath-Plus and Tesseract.js (OCR) from a CDN (everything else is vanilla)
 - ✅ **Dark mode** - automatically follows system preference
 - ✅ **Persistent state** - remembers which tool you were using
 - ✅ **Works offline** - except for the Tailwind CDN script load

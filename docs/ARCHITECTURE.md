@@ -23,7 +23,7 @@ Build a fully static, client-side-only devtools web application with zero build 
 
 ```
 devtools/
-├── index.html                 # Main UI: sidebar nav + 6 tool panels
+├── index.html                 # Main UI: sidebar nav + 7 tool panels
 ├── css/
 │   └── app.css                # Custom CSS: tree rendering, dark mode, form styling
 ├── js/
@@ -34,7 +34,8 @@ devtools/
 │   ├── py-to-json.js          # Python → JSON: literal tokenizer + parser
 │   ├── base64-converter.js    # Base64: encode/decode (standard + URL-safe)
 │   ├── datetime-tool.js       # Date & Time: epoch conversion, date add/subtract, difference
-│   └── image-annotator.js     # Image Annotator: canvas annotation (shapes, text, export)
+│   ├── image-annotator.js     # Image Annotator: canvas annotation (shapes, text, export)
+│   └── ocr-tool.js            # OCR: region selection + Tesseract.js text recognition
 ├── docs/                      # QUICKSTART, ARCHITECTURE (this file), TESTING, RELEASING
 ├── README.md                  # Full feature documentation
 ├── CLAUDE.md                  # Guide for AI coding agents
@@ -118,6 +119,15 @@ Epoch conversion and date arithmetic, all recalculated live on `input`/`change`:
 - **Live clock** — a 1s `setInterval` that runs only while the panel is visible (`onShow`/`onHide` from `app.js`)
 - Results are rendered with `createElement` + `textContent`
 
+### ocr-tool.js
+Text recognition over an image, delegated to [Tesseract.js](https://github.com/naptha/tesseract.js) v7.0.0
+(loaded from jsDelivr with a pinned version + SRI hash, exposes `window.Tesseract`):
+- **Image + selection** — same load paths as the annotator (paste/drop/upload); the canvas is the image's natural size, scaled with CSS, and pointer coordinates are mapped back to image pixels. The selection is drawn as a dimmed overlay with a dashed outline
+- **Cropping** (`cropCanvas`) — the region is cut from the original `Image` (not the overlay canvas) onto a white backdrop, upscaled up to 3x so the long side approaches 1600px
+- **Worker** — one Tesseract worker, created lazily on first OCR; a language change calls `worker.reinitialize(lang)`. A failed creation is dropped so the next run retries. The worker, WASM core and `traineddata` files are fetched from jsDelivr on first use
+- **Stale results** — each run gets an incrementing job id; a result is only written if it's still the latest job
+- Results go into an editable `<textarea>` (`.value`, never HTML); copy uses `DevTools.copyToClipboard`
+
 ## Data Flow
 
 ### JSON Viewer
@@ -156,7 +166,7 @@ User input → debounce(300ms) → DevTools.PyToJson.convert() ──→ tokeniz
 
 ### localStorage
 - **Key**: `activeTool` — which tab the user was last viewing
-- **Value**: `'viewer'` | `'transform'` | `'pytojson'` | `'base64'` | `'datetime'` | `'annotate'`
+- **Value**: `'viewer'` | `'transform'` | `'pytojson'` | `'base64'` | `'datetime'` | `'annotate'` | `'ocr'`
 - **Purpose**: Restore tab state across page reloads
 
 ### Module-level state

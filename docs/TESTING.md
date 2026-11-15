@@ -13,7 +13,7 @@ This document outlines test cases for verifying the devtools application works c
 ### General / Navigation
 
 - [ ] **Page loads without errors** - Check browser console (F12 → Console) for any errors
-- [ ] **Sidebar navigation works** - Click each of the six buttons (JSON Viewer, JSON Transform, Python → JSON, Base64, Date & Time, Image Annotator) and confirm the correct panel is shown
+- [ ] **Sidebar navigation works** - Click each of the seven buttons (JSON Viewer, JSON Transform, Python → JSON, Base64, Date & Time, Image Annotator, OCR) and confirm the correct panel is shown
 - [ ] **Active tab styling** - The current tab button should have blue background, others should be gray
 - [ ] **Persistent state** - Click a different tab, reload the page (F5), confirm the same tab is still active
 - [ ] **Dark mode** - Toggle your OS dark mode (or use Chrome DevTools → Rendering → Emulate CSS media) and confirm the page has good contrast and proper color scheme in both modes
@@ -694,10 +694,63 @@ Most cases below use this document, referred to as **the store doc**:
 
 ---
 
+## Tool 7: OCR
+
+> Needs network access the first time (Tesseract.js worker, WASM core and language data come from jsDelivr). A screenshot of this README makes a good test image.
+
+### Loading an Image
+
+- [ ] **Empty state** - Open the panel with no image
+  Expected: Dashed drop zone; clicking **OCR whole image** or **OCR selection** shows "Load an image first"
+- [ ] **Paste / drop / upload** - Load an image each way
+  Expected: Image appears, dimensions show on the right; uploading the same file twice still works
+- [ ] **Non-image file** - Drop a `.txt` file
+  Expected: Error "Not an image file"
+- [ ] **Text paste passes through** - With an image loaded, paste plain text into the results box
+  Expected: The text is pasted normally and the image is not replaced
+- [ ] **Transparent PNG** - Load a PNG with dark text on a transparent background (switch to dark mode)
+  Expected: The image shows on white and the text is readable and recognized
+
+### Recognition
+
+- [ ] **First run** - Click **OCR whole image**
+  Expected: Status shows loading/recognizing progress, then the text appears with "Done in Xs · confidence N%"; both OCR buttons are disabled while it runs
+- [ ] **Region (auto)** - Drag a box around one line of text
+  Expected: The area outside the box is dimmed, the selection size shows in the info label, and only that line's text appears
+- [ ] **Region in any direction** - Drag right-to-left and bottom-to-top
+  Expected: Box is drawn correctly, no negative-size glitches
+- [ ] **Tiny drag** - Click the image without dragging
+  Expected: No selection, no OCR run
+- [ ] **Auto-run off** - Uncheck **Run OCR when a region is drawn**, draw a box
+  Expected: Nothing runs until you click **OCR selection**
+- [ ] **No selection** - Click **Clear selection**, then **OCR selection**
+  Expected: Error "Drag on the image to select a region first"
+- [ ] **Esc** - Draw a box, press Esc (focus not in the text box)
+  Expected: Selection cleared
+- [ ] **Append** - Check **Append to previous results**, OCR two different regions
+  Expected: Both texts are in the box, separated by a blank line; unchecked, the second replaces the first
+- [ ] **Language** - Switch to another language (e.g. French) and run again
+  Expected: Status says it's loading language data, then recognition completes; the network tab shows `fra.traineddata.gz`
+- [ ] **Blank region** - Select an area with no text
+  Expected: Status "No text found…", no error
+- [ ] **Large image** - Load a 3000px-wide screenshot, select a small region
+  Expected: The box lands under the cursor and the recognized text matches the region
+
+### Results
+
+- [ ] **Copy** - Click **Copy**
+  Expected: Button flashes "Copied!"; the clipboard holds the text, including any manual edits made in the box
+- [ ] **Clear** - Click **Clear**
+  Expected: Results box empty
+- [ ] **Offline** - Block `cdn.jsdelivr.net` (DevTools → Network request blocking) and reload
+  Expected: Running OCR shows an error that the engine failed to load; other tools still work
+
+---
+
 ## Final Checklist
 
 - [ ] No JavaScript errors in browser console (F12 → Console)
-- [ ] All six tools load without lag
+- [ ] All seven tools load without lag
 - [ ] Keyboard navigation works (Tab key moves focus between inputs, Enter submits buttons where applicable)
 - [ ] Resize browser window and confirm layout remains usable on narrow screens
 - [ ] Test in both light and dark modes

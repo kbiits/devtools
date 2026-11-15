@@ -1,6 +1,6 @@
 # DevTools – Static Client-Side Utilities
 
-A fully client-side, no-build-required devtools web application featuring five powerful tools for JSON, data transformation, encoding, and image annotation.
+A fully client-side, no-build-required devtools web application featuring seven tools for JSON, data transformation, encoding, dates, image annotation, and OCR.
 
 ## Features
 
@@ -218,6 +218,25 @@ Epoch conversion and date arithmetic in one panel. Everything recalculates as yo
 - **Interpret dates as Local / UTC** — sets how dates without an offset are read and which calendar the day math uses
 - Nanosecond and microsecond epochs are parsed with `BigInt`, so precision isn't lost before truncating to JavaScript's millisecond resolution
 
+### 7. OCR
+Pull text out of a screenshot or photo. Recognition runs in the browser with [Tesseract.js](https://github.com/naptha/tesseract.js); the image is never uploaded.
+
+**Getting an image in:** paste (Cmd/Ctrl+V), drag and drop onto the image area, or **Upload**.
+
+**Recognizing text:**
+- **Select a region** — drag a box on the image. With **Run OCR when a region is drawn** checked (the default) it's read straight away; otherwise click **OCR selection**. Esc or **Clear selection** removes the box
+- **OCR whole image** reads everything
+- **Language** — English plus 16 others (Arabic, Chinese, Japanese, Korean, Indonesian, …) and an English + Arabic mix. Each language's data is downloaded the first time you use it, then cached by the browser
+- **Append to previous results** collects text from several regions in one box instead of replacing it
+
+**Results:** the text box is editable so you can fix stray characters, then **Copy** it. The status line shows timing and Tesseract's confidence score.
+
+**Implementation notes:**
+- The selection is cropped from the original image (not the on-screen canvas), and small crops are upscaled up to 3x before recognition, which noticeably helps with small UI text
+- Transparent images are flattened onto white, both on screen and for recognition, so dark text on a transparent PNG stays readable
+- One Tesseract worker is created lazily on first use and reused; changing the language reinitializes it rather than starting a new one
+- Loaded from jsDelivr: `tesseract.js@7.0.0` (pinned, SRI hash) fetches its worker, WASM core and `traineddata` language files from the same CDN on first run
+
 ## Usage
 
 ### Opening the App
@@ -234,6 +253,7 @@ Epoch conversion and date arithmetic in one panel. Everything recalculates as yo
 - **JSON Transformer**: Use the toolbar buttons to apply transformations. Input and output are independent (use "Copy" button to copy the output). Hit **Expand** on either pane for a full-window editor, **Esc** to come back
 - **Python Converter**: Paste Python literal syntax → converts to formatted JSON. Supports live debounced conversion.
 - **Image Annotator**: Paste a screenshot, pick a tool and color, drag to draw. Serve over `localhost` if you want "Copy image" to work — clipboard image writes need a secure context.
+- **OCR**: Paste a screenshot and drag a box around the text you want. Tight boxes around a single block of text give the best results. The first run takes a few seconds while the engine and language data download.
 
 ## Releasing
 
@@ -251,9 +271,9 @@ Releases are deployed with the local `deploy.ps1` script (`powershell -Execution
 
 ### Dependencies
 - Pure HTML5 and vanilla JavaScript — no build step, no npm, no node_modules
-- Two CDN script tags: Tailwind CSS (styling) and JSONPath-Plus (the JSONPath engine, pinned to v11.2.1 with an SRI hash)
+- Three CDN script tags: Tailwind CSS (styling), JSONPath-Plus (the JSONPath engine, pinned to v11.2.1 with an SRI hash) and Tesseract.js (the OCR engine, pinned to v7.0.0 with an SRI hash)
 - Everything else — JSON parsing, Python conversion, CSV, Base64, image annotation — is hand-rolled and local
-- Works offline except for the Tailwind and JSONPath-Plus CDN script loads
+- Works offline except for the CDN script loads; OCR additionally downloads its WASM core and language data on first use
 - Single-page app with client-side tab switching
 
 ### File Structure
@@ -270,6 +290,7 @@ devtools/
 │   ├── json-transform.js     # Tool 3: all transformation operations
 │   ├── image-annotator.js    # Tool 5: canvas image annotation
 │   ├── datetime-tool.js      # Tool 6: epoch conversion + date calculations
+│   ├── ocr-tool.js           # Tool 7: region selection + Tesseract.js OCR
 │   └── py-to-json.js         # Tool 4: Python literal tokenizer + parser
 ├── docs/                   # Quick start, architecture, testing, releasing
 ├── CLAUDE.md               # Guide for AI coding agents working in this repo
@@ -291,7 +312,8 @@ Tested on Chrome/Edge 90+, Firefox 88+, Safari 14+.
 2. **Key case conversion**: Ambiguous acronym runs (e.g., `HTTPSConnectionID`) may not split perfectly. See the algorithm description above for exact behavior.
 3. **CSV**: Cannot round-trip `null` vs. empty string (both become empty cells). Ragged rows (fewer columns than header) are padded with empty strings.
 4. **Python converter**: Limited to literal data structures; no expressions, variables, or comprehensions.
-5. **Tree view**: Very deeply nested JSON (1000+ levels) may hit recursion limits; not recommended for pathologically deep structures.
+5. **OCR**: Needs the Tesseract.js CDN and language data on first use. Accuracy depends on the image: low-resolution, skewed, handwritten or stylized text may come back garbled. It returns plain text only; table and column layout isn't preserved.
+6. **Tree view**: Very deeply nested JSON (1000+ levels) may hit recursion limits; not recommended for pathologically deep structures.
 
 ## Examples
 
